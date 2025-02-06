@@ -4,26 +4,23 @@ import glob
 import os
 
 import torch
-from setuptools import find_packages, setup
-from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
-
-requirements = ["torch", "torchvision"]
-
+from setuptools import setup
+from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, BuildExtension
 
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    extensions_dir = os.path.join(this_dir, "src")
+    src_relative = "src"
+    src_full = os.path.join(this_dir, src_relative)
 
-    main_file = glob.glob(os.path.join(extensions_dir, "*.cpp"))
-    source_cpu = glob.glob(os.path.join(extensions_dir, "cpu", "*.cpp"))
-    source_cuda = glob.glob(os.path.join(extensions_dir, "cuda", "*.cu"))
+    main_file = glob.glob(os.path.join(src_relative, "*.cpp"))
+    source_cpu = glob.glob(os.path.join(src_relative, "cpu", "*.cpp"))
+    source_cuda = glob.glob(os.path.join(src_relative, "cuda", "*.cu"))
     os.environ["CC"] = "g++"
     sources = main_file + source_cpu
     extension = CppExtension
     extra_compile_args = {"cxx": []}
     define_macros = []
 
-    
     if torch.cuda.is_available() and CUDA_HOME is not None:
         extension = CUDAExtension
         sources += source_cuda
@@ -34,32 +31,27 @@ def get_extensions():
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
-    else:
-        # raise NotImplementedError('Cuda is not available')
-        pass
 
-    sources = [os.path.join(extensions_dir, s) for s in sources]
-    include_dirs = [extensions_dir]
-    ext_modules = [
+    sources = [os.path.relpath(s, this_dir) for s in sources]
+    include_dirs = [src_full]
+    print("sources", sources)
+    print("include_dirs", include_dirs)
+    print("define_macros", define_macros)
+    print("extra_compile_args", extra_compile_args)
+    return [
         extension(
-            "_ext",
+            "dcnv2._ext",
             sources,
             include_dirs=include_dirs,
             define_macros=define_macros,
             extra_compile_args=extra_compile_args,
         )
     ]
-    return ext_modules
-
 
 setup(
-    name="DCNv2",
-    version="0.1",
-    author="charlesshang",
-    url="https://github.com/charlesshang/DCNv2",
-    description="deformable convolutional networks",
-    packages=find_packages(exclude=("configs", "tests")),
-    # install_requires=requirements,
+    name='dcnv2',
+    version='0.1.3',
+    packages=['dcnv2'],
     ext_modules=get_extensions(),
-    cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
+    cmdclass={"build_ext": BuildExtension},
 )
