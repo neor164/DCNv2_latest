@@ -9,7 +9,7 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
-import _ext as _backend
+from . import _ext as _backend
 
 
 class _DCNv2(Function):
